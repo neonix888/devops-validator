@@ -52,3 +52,8 @@ Testing/
 *.a
 *.so
 *.dylib
+
+# Personal documents (not for public repo)
+COVER_LETTER.md
+PUSH_TO_GITHUB.md
+*_INSTRUCTIONS.md
