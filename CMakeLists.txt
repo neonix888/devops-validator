@@ -59,6 +59,13 @@ FetchContent_Declare(
     GIT_TAG 0.8.0
     GIT_SHALLOW TRUE
 )
+
+# Set policy to handle older yaml-cpp CMakeLists.txt on newer CMake
+set(CMAKE_POLICY_DEFAULT_CMP0000 NEW)
+if(POLICY CMP0000)
+    cmake_policy(SET CMP0000 NEW)
+endif()
+
 FetchContent_MakeAvailable(yaml-cpp)
 
 # Source files
