@@ -8,6 +8,12 @@
 #include <array>
 #include <memory>
 
+// Platform-specific popen/pclose
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#endif
+
 namespace fs = std::filesystem;
 
 namespace devops {

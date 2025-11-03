@@ -8,6 +8,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#define popen _popen
+#define pclose _pclose
 #else
 #include <sys/utsname.h>
 #include <unistd.h>
