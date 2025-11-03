@@ -1,0 +1,54 @@
+# Build directories
+build/
+cmake-build-*/
+_build/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Package outputs
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+*.dmg
+*.msi
+*.exe
+_CPack_Packages/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+*.egg
+
+# Node
+node_modules/
+package-lock.json
+
+# Testing
+Testing/
+*.log
+
+# Misc
+*.o
+*.a
+*.so
+*.dylib

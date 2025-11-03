@@ -1,0 +1,241 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+env:
+  CMAKE_VERSION: 3.20.0
+  BUILD_TYPE: Release
+
+jobs:
+  # Linux build with multiple package formats
+  build-linux:
+    name: Build on Ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          rpm
+
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DBUILD_TESTING=ON \
+          -G Ninja
+
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }}
+
+    - name: Test
+      run: cd build && ctest --output-on-failure
+
+    - name: Package DEB
+      run: |
+        cd build
+        cpack -G DEB
+        ls -lh *.deb
+
+    - name: Package RPM
+      run: |
+        cd build
+        cpack -G RPM
+        ls -lh *.rpm
+
+    - name: Package TGZ
+      run: |
+        cd build
+        cpack -G TGZ
+        ls -lh *.tar.gz
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-packages
+        path: |
+          build/*.deb
+          build/*.rpm
+          build/*.tar.gz
+
+  # macOS build
+  build-macos:
+    name: Build on macOS
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        brew install cmake ninja
+
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DBUILD_TESTING=ON \
+          -G Ninja
+
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }}
+
+    - name: Test
+      run: cd build && ctest --output-on-failure
+
+    - name: Package
+      run: |
+        cd build
+        cpack -G TGZ
+        ls -lh *.tar.gz
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-packages
+        path: build/*.tar.gz
+
+  # Windows build
+  build-windows:
+    name: Build on Windows
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DBUILD_TESTING=ON
+
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }}
+
+    - name: Test
+      run: |
+        cd build
+        ctest --output-on-failure --build-config ${{ env.BUILD_TYPE }}
+
+    - name: Package ZIP
+      run: |
+        cd build
+        cpack -G ZIP -C ${{ env.BUILD_TYPE }}
+        Get-ChildItem *.zip
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-packages
+        path: build/*.zip
+
+  # Docker build
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: devops-validator:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker image
+      run: |
+        docker run --rm devops-validator:latest version
+        docker run --rm devops-validator:latest help
+
+  # Code quality checks
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck clang-format
+
+    - name: Run cppcheck
+      run: |
+        cppcheck --enable=all --error-exitcode=0 \
+          --suppress=missingIncludeSystem \
+          --suppress=unmatchedSuppression \
+          src/ include/
+
+    - name: Check formatting
+      run: |
+        find src include -name '*.cpp' -o -name '*.h' | \
+          xargs clang-format --dry-run --Werror || true
+
+  # Security scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        exit-code: '0'
+
+  # Release assets (only on release)
+  release:
+    name: Upload Release Assets
+    needs: [build-linux, build-macos, build-windows, build-docker]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Linux artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-packages
+        path: ./dist
+
+    - name: Download macOS artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-packages
+        path: ./dist
+
+    - name: Download Windows artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-packages
+        path: ./dist
+
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./dist/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,13 @@
+build/
+.git/
+.github/
+*.md
+LICENSE
+.gitignore
+docs/
+packaging/
+tests/
+*.tar.gz
+*.deb
+*.rpm
+*.zip
