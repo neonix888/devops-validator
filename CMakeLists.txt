@@ -53,18 +53,19 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 
 # yaml-cpp for YAML parsing
+# Use master branch which has updated CMake requirements
 FetchContent_Declare(
     yaml-cpp
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-    GIT_TAG 0.8.0
+    GIT_TAG master
     GIT_SHALLOW TRUE
 )
 
-# Set policy to handle older yaml-cpp CMakeLists.txt on newer CMake
-set(CMAKE_POLICY_DEFAULT_CMP0000 NEW)
-if(POLICY CMP0000)
-    cmake_policy(SET CMP0000 NEW)
-endif()
+# Disable yaml-cpp tests and tools to speed up build
+set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
+set(YAML_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(yaml-cpp)
 
