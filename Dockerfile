@@ -34,8 +34,8 @@ RUN apt-get update && apt-get install -y \
 # Copy binary from builder
 COPY --from=builder /build/build/devops-validator /usr/local/bin/
 
-# Create non-root user
-RUN useradd -m -u 1000 devops && \
+# Create non-root user (let system assign UID)
+RUN useradd -m devops && \
     mkdir -p /workspace && \
     chown -R devops:devops /workspace
 
